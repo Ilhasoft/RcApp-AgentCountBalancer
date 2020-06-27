@@ -48,8 +48,12 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
                 return;
             }
             const agents = res.data.agents;
-            agents.map( (agent) => {
-                agent.count = 0;
+
+            const size = agents ? agents.length : 0;
+            const randomNumbers = Array.from({length: size}, () => Math.floor(Math.random() * size));
+
+            agents.map( (agent, index) => {
+                agent.count = randomNumbers[index];
             });
             const reqOptionsForPut = reqOptions;
             reqOptionsForPut.data = {department, agents};
