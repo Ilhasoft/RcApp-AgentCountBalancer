@@ -32,37 +32,40 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
             data: {},
         };
 
-        let res = await http.get(baseUrl + '/api/v1/livechat/department', reqOptions);
-
+        const depId = room.department!.id;
+        let res = await http.get(`${baseUrl}/api/v1/livechat/department/${depId}`, reqOptions);
         if (res.statusCode !== HttpStatusCode.OK || res.data.success !== true) {
-            this.getLogger().error('Failed to get departments: ', res);
+            this.getLogger().error('Failed to get department info: ', res);
             return;
         }
-        const departments = res.data.departments;
-
-        await departments.map( async (department) => {
-            const depId = department._id;
-            res = await http.get(baseUrl + `/api/v1/livechat/department/${depId}`, reqOptions);
+        const agents = res.data.agents;
+        const department = res.data.department;
+        const onlineAgents: Array<any> = [];
+        await Promise.all(agents.map( async (agent) => {
+            res = await http.get(`${baseUrl}/api/v1/livechat/users/agent/${agent.agentId}`, reqOptions);
             if (res.statusCode !== HttpStatusCode.OK || res.data.success !== true) {
-                this.getLogger().error('Failed to get department info: ', res);
+                this.getLogger().error('Failed to get agent info: ', res);
                 return;
             }
-            const agents = res.data.agents;
+            if (res.data.user.statusLivechat === 'available') {
+                onlineAgents.push(agent);
+            }
+        }));
 
-            const size = agents ? agents.length : 0;
-            const randomNumbers = Array.from({length: size}, () => Math.floor(Math.random() * size));
-
-            agents.map( (agent, index) => {
-                agent.count = randomNumbers[index];
+        const hasMoreThanOne = onlineAgents.find( (agent) => agent.count > 1);
+        const everyoneHasOne = onlineAgents.every( (agent) => agent.count >= 1);
+        if (hasMoreThanOne || everyoneHasOne) {
+            onlineAgents.map( (agent, index) => {
+                agent.count = 0;
             });
             const reqOptionsForPut = reqOptions;
-            reqOptionsForPut.data = {department, agents};
-            res = await http.put(baseUrl + `/api/v1/livechat/department/${depId}`, reqOptionsForPut);
+            reqOptionsForPut.data = {department, agents: onlineAgents};
+            res = await http.put(`${baseUrl}/api/v1/livechat/department/${depId}`, reqOptionsForPut);
             if (res.statusCode !== HttpStatusCode.OK || res.data.success !== true) {
                 this.getLogger().error('Failed to update agents count value: ', res);
                 return;
             }
-        });
+        }
 
     }
 
