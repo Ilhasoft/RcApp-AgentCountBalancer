@@ -41,6 +41,7 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
         const agents = res.data.agents;
         const department = res.data.department;
         const onlineAgents: Array<any> = [];
+        const offlineAgents: Array<any> = [];
         await Promise.all(agents.map( async (agent) => {
             res = await http.get(`${baseUrl}/api/v1/livechat/users/agent/${agent.agentId}`, reqOptions);
             if (res.statusCode !== HttpStatusCode.OK || res.data.success !== true) {
@@ -49,6 +50,8 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
             }
             if (res.data.user.statusLivechat === 'available') {
                 onlineAgents.push(agent);
+            } else {
+                offlineAgents.push(agent);
             }
         }));
 
@@ -59,7 +62,8 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
                 agent.count = 0;
             });
             const reqOptionsForPut = reqOptions;
-            reqOptionsForPut.data = {department, agents: onlineAgents};
+            const allAgents = onlineAgents.concat(offlineAgents);
+            reqOptionsForPut.data = {department, agents: allAgents };
             res = await http.put(`${baseUrl}/api/v1/livechat/department/${depId}`, reqOptionsForPut);
             if (res.statusCode !== HttpStatusCode.OK || res.data.success !== true) {
                 this.getLogger().error('Failed to update agents count value: ', res);
