@@ -2,6 +2,7 @@ import {
     HttpStatusCode,
     IAppAccessors,
     IConfigurationExtend,
+    IEnvironmentRead,
     IHttp,
     ILogger,
     IPersistence,
@@ -16,6 +17,10 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
     constructor(info: IAppInfo, logger: ILogger, accessors: IAppAccessors) {
         super(info, logger, accessors);
 
+    }
+
+    public async initialize(configurationExtend: IConfigurationExtend, environmentRead: IEnvironmentRead): Promise<void> {
+        await this.extendConfiguration(configurationExtend);
     }
 
     public async executePostLivechatRoomStarted(room: ILivechatRoom, read: IRead, http: IHttp, persistence: IPersistence): Promise<void> {
@@ -48,16 +53,26 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
                 this.getLogger().error('Failed to get agent info: ', res);
                 return;
             }
-            if (res.data.user.statusLivechat === 'available') {
-                onlineAgents.push(agent);
+            if (res.data.user.statusLivechat === 'available' && res.data.user.status === 'online') {
+                onlineAgents.push({...agent, status: res.data.user.status});
             } else {
-                offlineAgents.push(agent);
+                offlineAgents.push({...agent, status: res.data.user.status});
             }
         }));
 
         const hasMoreThanOne = onlineAgents.find( (agent) => agent.count > 1);
         const everyoneHasOne = onlineAgents.every( (agent) => agent.count >= 1);
+
+        const shouldLog = await read.getEnvironmentReader().getSettings().getValueById('log_settings');
+        if (shouldLog) {
+            this.getLogger().log(`New visitor entering department: ${department.name}`);
+            this.getLogger().log(`Online agents: `, onlineAgents);
+            this.getLogger().log(`Offline agents: `, offlineAgents);
+            this.getLogger().log(`HasMoreThanOne: `, hasMoreThanOne);
+            this.getLogger().log(`EveryOneHasOne: `, everyoneHasOne);
+        }
         if (hasMoreThanOne || everyoneHasOne) {
+            this.getLogger().log('Going to reset everyone from department: ', department.name);
             onlineAgents.map( (agent, index) => {
                 agent.count = 0;
             });
@@ -91,6 +106,15 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
             required: true,
             public: false,
             i18nLabel: 'ID de Usuário',
+        });
+
+        await configuration.settings.provideSetting({
+            id: 'log_setting',
+            type: SettingType.BOOLEAN,
+            packageValue: '',
+            required: false,
+            public: false,
+            i18nLabel: 'Logs',
         });
     }
 
