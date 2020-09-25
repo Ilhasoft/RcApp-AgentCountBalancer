@@ -63,7 +63,7 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
         const hasMoreThanOne = onlineAgents.find( (agent) => agent.count > 1);
         const everyoneHasOne = onlineAgents.every( (agent) => agent.count >= 1);
 
-        const shouldLog = await read.getEnvironmentReader().getSettings().getValueById('log_settings');
+        const shouldLog = await read.getEnvironmentReader().getSettings().getValueById('log_setting');
         if (shouldLog) {
             this.getLogger().log(`New visitor entering department: ${department.name}`);
             this.getLogger().log(`Online agents: `, onlineAgents);
