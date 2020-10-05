@@ -53,7 +53,10 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
                 this.getLogger().error('Failed to get agent info: ', res);
                 return;
             }
-            if (res.data.user.statusLivechat === 'available' && res.data.user.status === 'online') {
+
+            const acceptAway = await read.getEnvironmentReader().getServerSettings().getValueById('Livechat_enabled_when_agent_idle');
+
+            if (res.data.user.statusLivechat === 'available' && (res.data.user.status === 'online' || (acceptAway && res.data.user.status === 'away'))) {
                 onlineAgents.push({...agent, status: res.data.user.status});
             } else {
                 offlineAgents.push({...agent, status: res.data.user.status});
