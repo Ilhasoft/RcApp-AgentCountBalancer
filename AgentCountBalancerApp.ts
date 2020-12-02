@@ -79,6 +79,12 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
             availableAgents.map((agent, index) => {
                 agent.count = 0;
             });
+            const clearAll = await read.getEnvironmentReader().getSettings().getValueById('clear_all_setting');
+            if (clearAll) {
+                unavailableAgents.map((agent, index) => {
+                    agent.count = 0;
+                });
+            }
             const reqOptionsForPut = reqOptions;
             const allAgents = availableAgents.concat(unavailableAgents);
             reqOptionsForPut.data = { department, agents: allAgents };
@@ -118,6 +124,15 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
             required: false,
             public: false,
             i18nLabel: 'Logs',
+        });
+
+        await configuration.settings.provideSetting({
+            id: 'clear_all_setting',
+            type: SettingType.BOOLEAN,
+            packageValue: '',
+            required: false,
+            public: false,
+            i18nLabel: 'Always Clear All',
         });
     }
 
