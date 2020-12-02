@@ -132,7 +132,7 @@ export class AgentCountBalancerApp extends App implements IPostLivechatRoomStart
             packageValue: '',
             required: false,
             public: false,
-            i18nLabel: 'Always Clear All',
+            i18nLabel: 'Clear Offline',
         });
     }
 
